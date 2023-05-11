@@ -9,9 +9,9 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li><a href="#">Block</a></li>
-    <li><a href="#">Blockchain</a></li>
-    <li><a href="#">Proof of Work</a></li>
+    <li><a href="https://github.com/MoisesAdame/go-blockchain-intro/blob/main/lib/block.go">Block</a></li>
+    <li><a href="https://github.com/MoisesAdame/go-blockchain-intro/blob/main/lib/blockchain.go">Blockchain</a></li>
+    <li><a href="https://github.com/MoisesAdame/go-blockchain-intro/blob/main/lib/blockchain.go">Proof of Work</a></li>
   </ol>
 </details>
 
