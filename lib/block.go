@@ -4,10 +4,12 @@
 package lib
 
 import (
-	"encoding/hex"
 	"fmt"
-	"strconv"
 	"time"
+	"bytes"
+	"strconv"
+	"encoding/gob"
+	"encoding/hex"
 )
 
 // Main blockchain element, The Block
@@ -59,4 +61,21 @@ func (b *Block) Print() {
 	txt += "- Hash:      " + hexHash[:4] + "..." + hexHash[len(hexHash)-4:] + "\n"
 
 	fmt.Println(txt)
+}
+
+// Serializing the block for its proper storage
+func (b *Block) Serialize() []byte {
+	var res bytes.Buffer
+	encode := gob.NewEncoder(&res)
+	encode.Encode(b)
+	return res.Bytes()
+}
+
+// Deserializing the block to use it after its retrieval.
+func DeserializeBlock(serializedBlock []byte) *Block {
+	var resBlock *Block
+	decode := gob.NewDecoder(bytes.NewReader(serializedBlock))
+	decode.Decode(resBlock)
+
+	return resBlock
 }
