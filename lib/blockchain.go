@@ -11,7 +11,8 @@ type Blockchain struct {
 
 // Constructor function for The Blockchain
 func NewBlockchain() *Blockchain {
-	return &Blockchain{[]*Block{}, 0}
+	var genesisBlock *Block = NewBlock("Genesis", nil)
+	return &Blockchain{[]*Block{genesisBlock}, 1}
 }
 
 // Method that calculates the size of The Blockchain
