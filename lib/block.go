@@ -72,10 +72,11 @@ func (b *Block) Serialize() []byte {
 }
 
 // Deserializing the block to use it after its retrieval.
-func DeserializeBlock(serializedBlock []byte) *Block {
-	var resBlock *Block
-	decode := gob.NewDecoder(bytes.NewReader(serializedBlock))
-	decode.Decode(resBlock)
+func DeserializeBlock(d []byte) *Block {
+	var block Block
 
-	return resBlock
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	decoder.Decode(&block)
+
+	return &block
 }
