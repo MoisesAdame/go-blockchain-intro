@@ -4,12 +4,12 @@
 package lib
 
 import (
-	"fmt"
-	"time"
 	"bytes"
-	"strconv"
 	"encoding/gob"
 	"encoding/hex"
+	"fmt"
+	"strconv"
+	"time"
 )
 
 // Main blockchain element, The Block

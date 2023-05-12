@@ -3,7 +3,7 @@
 
 package lib
 
-import(
+import (
 	"github.com/boltdb/bolt"
 )
 
@@ -12,9 +12,9 @@ const blocksBucket = "blocks"
 
 // List of Blocks, The Blockchain
 type Blockchain struct {
-	tip []byte
-	db *bolt.DB
-	size   int
+	tip  []byte
+	db   *bolt.DB
+	size int
 }
 
 // Constructor function for The Blockchain
@@ -38,7 +38,7 @@ func NewBlockchain() *Blockchain {
 
 			// Making the tip the genesis block
 			tip = genesisBlock.hash
-		}else {
+		} else {
 			tip = b.Get([]byte("l"))
 		}
 

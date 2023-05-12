@@ -68,7 +68,7 @@ func (pow *ProofOfWork) Validate() bool {
 	// Prepare
 	var preparedData []byte = pow.PrepareData(int(pow.block.nonce))
 
-	// Hash 
+	// Hash
 	var hash [32]byte = sha256.Sum256(preparedData)
 
 	// Move to Big-Int
