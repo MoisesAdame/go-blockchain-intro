@@ -2,12 +2,12 @@ package main
 
 import (
 	"./lib"
-
-
 )
 
 func main() {
-	var blockchain *lib.Blockchain = lib.NewBlockchain()
-	blockchain.AddBlock("block1")
-	blockchain.AddBlock("block2")
+	blockchain := lib.NewBlockchain()
+	blockchain.AddBlock("Bloque 1")
+	blockchain.AddBlock("Bloque 2")
+	blockchain.AddBlock("Bloque 3")
+	blockchain.Print()
 }
