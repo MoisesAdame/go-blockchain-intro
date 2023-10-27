@@ -1,10 +1,12 @@
 // Author: Moisés Adame Aguilar
-// Date: May 11, 2023
+// Creation Date: May 11th, 2023
 
 package lib
 
 import (
+	"fmt"
 	"github.com/boltdb/bolt"
+	"log"
 )
 
 const database = "blockchain.db"
@@ -12,69 +14,102 @@ const blocksBucket = "blocks"
 
 // List of Blocks, The Blockchain
 type Blockchain struct {
-	tip  []byte
-	db   *bolt.DB
-	size int
+	Database *bolt.DB
+	Head 	 []byte
 }
 
 // Constructor function for The Blockchain
 func NewBlockchain() *Blockchain {
-	// Creating the tip, the head of our blockchain
-	var tip []byte
+	var currentHead []byte
+	db, err := bolt.Open(database, 0600, nil)
+	if err != nil {
+		log.Fatal("Unable to create database!")
+	}
 
-	// Opening the database
-	db, _ := bolt.Open(database, 0600, nil)
-	db.Update(func(tx *bolt.Tx) error {
-		// Cheching for trhe existance of the bucket
-		b := tx.Bucket([]byte(blocksBucket))
-		if b == nil {
-			// Instantiating the genesis block
-			var genesisBlock *Block = NewBlock("Genesis", nil)
+	defer db.Close()
 
-			// Serializing and storing
-			b, _ := tx.CreateBucket([]byte(blocksBucket))
-			b.Put(genesisBlock.hash, genesisBlock.Serialize())
-			b.Put([]byte("l"), genesisBlock.hash)
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blocksBucket))
 
-			// Making the tip the genesis block
-			tip = genesisBlock.hash
-		} else {
-			tip = b.Get([]byte("l"))
+		if bucket == nil {
+			bucket, bucketError := tx.CreateBucket([]byte(blocksBucket))
+
+			genesisBlock := NewGenesisBlock()
+
+			bucketError = bucket.Put([]byte(genesisBlock.Hash), genesisBlock.Encode())
+			bucketError = bucket.Put([]byte("l"), genesisBlock.Hash)
+			currentHead = genesisBlock.Hash
+
+			return bucketError
+		}else{
+			currentHead = bucket.Get([]byte("l"))
+			return nil
 		}
-
-		return nil
 	})
 
-	return &Blockchain{tip, db, 1}
-}
+	if err != nil {
+		log.Fatal("Unable create Genesis Block!")
+	}
 
-// Method that calculates the size of The Blockchain
-func (bc *Blockchain) Size() int {
-	return bc.size
+	blockchain := &Blockchain{db, currentHead}
+	return blockchain
 }
 
 // Method that adds a new block to The Blockchain
-func (bc *Blockchain) AddBlock(data string) {
-	var lastHash []byte
+func (blockchain *Blockchain) AddBlock(data string) {
+	db, err := bolt.Open(database, 0600, nil)
+	if err != nil {
+		log.Fatal("Unable to open database!")
+	}
 
-	bc.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		lastHash = b.Get([]byte("l"))
+	defer db.Close()
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blocksBucket))
+
+		prevBlockHash := bucket.Get([]byte("l"))
+		newBlock := NewBlock(data, prevBlockHash)
+
+		bucket.Put([]byte(newBlock.Hash), newBlock.Encode())
+		bucket.Put([]byte("l"), newBlock.Hash)
+		blockchain.Head = newBlock.Hash
 
 		return nil
 	})
 
-	newBlock := NewBlock(data, lastHash)
-	newBlock.Print()
+	if err != nil {
+		log.Fatal("Unable create Genesis Block!")
+	}
+}
 
-	bc.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		b.Put(newBlock.hash, newBlock.Serialize())
-		b.Put([]byte("l"), newBlock.hash)
-		bc.tip = newBlock.hash
+// Method that prints every block within the chain.
+func (blockchain *Blockchain) Print() {
+	db, err := bolt.Open(database, 0600, nil)
+	if err != nil {
+		log.Fatal("Unable to open database!")
+	}
 
+	defer db.Close()
+
+	auxHead := blockchain.Head
+	var currentBlock *Block
+	
+	err = db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blocksBucket))
+		for len(auxHead) != 0 {
+			currentBlock = DecodeBlock(bucket.Get(auxHead))
+			currentBlock.Print()
+
+			pow := NewProofOfWork(currentBlock)
+			fmt.Println("[*] PoW: ", pow.Validate())
+			fmt.Println()
+
+			auxHead = currentBlock.PrevBlockHash
+		}
 		return nil
 	})
 
-	bc.size++
+	if err != nil {
+		log.Fatal("Error reading database!")
+	}
 }
