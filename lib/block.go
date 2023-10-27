@@ -1,82 +1,85 @@
 // Author: Moisés Adame Aguilar
-// Date: May 11, 2023
+// Creation Date: May 11th, 2023
 
 package lib
 
 import (
-	"bytes"
-	"encoding/gob"
+	"time"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"time"
+	"encoding/gob"
+	"bytes"
+	"log"
 )
 
 // Main blockchain element, The Block
 type Block struct {
-	timestamp int64
-	nonce     int64
-	data      []byte
-	prevHash  []byte
-	hash      []byte
+	Timestamp     int64
+	Nonce		  int64
+	Data          []byte
+	PrevBlockHash []byte
+	Hash          []byte
+}
+
+// Method that geneterates the block's hash via PoW
+func (block *Block) SetHash() {
+	pow := NewProofOfWork(block)
+	block.Nonce, block.Hash = pow.Run()
 }
 
 // Constructor method for the Block
-func NewBlock(data string, prevHash []byte) *Block {
-	block := &Block{time.Now().Unix(), -1, []byte(data), prevHash, []byte{}}
-
-	// Mining (obtaining nonce and hash)
-	pow := NewProofOfWork(block)
-	nonce, hash := pow.Run()
-
-	// Asigning the mined values
-	block.nonce = int64(nonce)
-	block.hash = hash
-
+func NewBlock(data string, prevBlockHash []byte) *Block {
+	block := &Block{time.Now().Unix(), -1, []byte(data), prevBlockHash, []byte{}}
+	block.SetHash()
 	return block
 }
 
-// Function that converts an int into a []byte of an hex
-func IntToHex(num int64) []byte {
-	return []byte(strconv.FormatInt(num, 16))
+// Constructor method for Genesis Block
+func NewGenesisBlock() *Block {
+	block := &Block{time.Now().Unix(), 0, []byte("Genesis Block"), []byte{}, []byte{}}
+	block.SetHash()
+	return block
 }
 
 // Printing the block's attributes.
-func (b *Block) Print() {
-	// Pasing hashes from []byte to string
-	var hexPrevHash string = hex.EncodeToString(b.prevHash)
-	var hexHash string = hex.EncodeToString(b.hash)
+func (block *Block) Print() {
+	fmt.Println("[*] Timestamp: ", time.Unix(block.Timestamp, 0))
+	fmt.Println("[*] Nonce: ", block.Nonce)
+	fmt.Println("[*] Data: ", string(block.Data))
 
-	// Main string
-	var txt string
-	txt += "- Timestamp: " + strconv.FormatInt(b.timestamp, 10) + "\n"
-	txt += "- Data:      " + string(b.data) + "\n"
-	txt += "- Nonce:     " + strconv.FormatInt(b.nonce, 10) + "\n"
-
-	if len(hexPrevHash) == 0 {
-		txt += "- Prev Hash: " + "<nil>" + "\n"
-	} else {
-		txt += "- Prev Hash: " + hexPrevHash[:4] + "..." + hexPrevHash[len(hexPrevHash)-4:] + "\n"
+	prevHashBlockString := hex.EncodeToString(block.PrevBlockHash)
+	if len(prevHashBlockString) != 0 {
+		fmt.Println("[*] PrevBlockHash: ", prevHashBlockString[:4] + "..." + prevHashBlockString[len(prevHashBlockString) - 4:])
+	}else{
+		fmt.Println("[*] PrevBlockHash: <nil>")
 	}
-	txt += "- Hash:      " + hexHash[:4] + "..." + hexHash[len(hexHash)-4:] + "\n"
-
-	fmt.Println(txt)
+	
+	hashString := hex.EncodeToString(block.Hash)
+	fmt.Println("[*] Hash: ", hashString[:4] + "..." + hashString[len(hashString) - 4:])
 }
 
 // Serializing the block for its proper storage
-func (b *Block) Serialize() []byte {
-	var res bytes.Buffer
-	encode := gob.NewEncoder(&res)
-	encode.Encode(b)
-	return res.Bytes()
+func (block *Block) Encode() []byte {
+	var buffer bytes.Buffer
+	enc := gob.NewEncoder(&buffer)
+	err := enc.Encode(*block)
+	
+	if err != nil {
+		log.Fatal("encode:", err)
+	}
+
+	return buffer.Bytes()
 }
 
 // Deserializing the block to use it after its retrieval.
-func DeserializeBlock(d []byte) *Block {
+func DecodeBlock(buffer []byte) *Block {
+	newBuffer := bytes.NewBuffer(buffer)
+	dec := gob.NewDecoder(newBuffer)
 	var block Block
-
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	decoder.Decode(&block)
+	err := dec.Decode(&block)
+	if err != nil {
+		log.Fatal("decode:", err)
+	}
 
 	return &block
 }
