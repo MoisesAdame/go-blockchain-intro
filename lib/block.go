@@ -10,13 +10,14 @@ import (
 	"encoding/gob"
 	"bytes"
 	"log"
+	"crypto/sha256"
 )
 
 // Main blockchain element, The Block
 type Block struct {
 	Timestamp     int64
 	Nonce		  int64
-	Data          []byte
+	Transactions  []*Transaction
 	PrevBlockHash []byte
 	Hash          []byte
 }
@@ -28,15 +29,15 @@ func (block *Block) SetHash() {
 }
 
 // Constructor method for the Block
-func NewBlock(data string, prevBlockHash []byte) *Block {
-	block := &Block{time.Now().Unix(), -1, []byte(data), prevBlockHash, []byte{}}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte) *Block {
+	block := &Block{time.Now().Unix(), -1, transactions, prevBlockHash, []byte{}}
 	block.SetHash()
 	return block
 }
 
 // Constructor method for Genesis Block
-func NewGenesisBlock() *Block {
-	block := &Block{time.Now().Unix(), 0, []byte("Genesis Block"), []byte{}, []byte{}}
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	block := &Block{time.Now().Unix(), 0, []*Transaction{coinbase}, []byte{}, []byte{}}
 	block.SetHash()
 	return block
 }
@@ -45,7 +46,6 @@ func NewGenesisBlock() *Block {
 func (block *Block) Print() {
 	fmt.Println("[*] Timestamp: ", time.Unix(block.Timestamp, 0))
 	fmt.Println("[*] Nonce: ", block.Nonce)
-	fmt.Println("[*] Data: ", string(block.Data))
 
 	prevHashBlockString := hex.EncodeToString(block.PrevBlockHash)
 	if len(prevHashBlockString) != 0 {
@@ -82,4 +82,16 @@ func DecodeBlock(buffer []byte) *Block {
 	}
 
 	return &block
+}
+
+// Method that joins and hases every trabsaction id stored in the block.
+func (block *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	for _, tx := range block.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	
+	hash := sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return hash[:]
 }

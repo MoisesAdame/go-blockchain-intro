@@ -1,7 +1,7 @@
 // Author: Moisés Adame Aguilar
 // Creation Date: October 27th, 2023
 
-package lib
+package cli
 
 import (
 	"flag"
@@ -10,13 +10,11 @@ import (
 	"fmt"
 )
 
-type CLI struct {
-	blockchain *Blockchain
-}
+type CLI struct {}
 
 // Constructor method for the Command Line Interface
 func NewCLI() *CLI {
-	return &CLI{NewBlockchain()}
+	return &CLI{}
 }
 
 func (cli *CLI) printUsage() {
@@ -39,30 +37,32 @@ func (cli *CLI) validateArgs() {
 	}
 }
 
-func (cli *CLI) addBlock(data string) {
-	cli.blockchain.AddBlock(data)
-}
-
-func (cli *CLI) printChain() {
-	cli.blockchain.Print()
-}
 
 func (cli *CLI) Run(){
 	cli.validateArgs()
 
-	createBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
-	printBlockchainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
+	createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
+	addBlockchainAddress := createBlockchainCmd.String("address", "", "Your addres.")
 
-	addBlockData := createBlockCmd.String("data", "", "Block data")
+	setNodeIdCmd := flag.NewFlagSet("setid", flag.ExitOnError)
+	idNumber := setNodeIdCmd.String("id", "", "Your node id.")
+
+	logOutCmd := flag.NewFlagSet("logout", flag.ExitOnError)
+	logOutValue := logOutCmd.String("value", "", "A bool true or false")
 
 	switch os.Args[1] {
-	case "addblock":
-		err := createBlockCmd.Parse(os.Args[2:])
+	case "createblockchain":
+		err := createBlockchainCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
 		}
-	case "printchain":
-		err := printBlockchainCmd.Parse(os.Args[2:])
+	case "setid":
+		err := setNodeIdCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+	case "logout":
+		err := logOutCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
 		}
@@ -71,16 +71,27 @@ func (cli *CLI) Run(){
 		os.Exit(1)
 	}
 
-	if createBlockCmd.Parsed() {
-		if *addBlockData == "" {
-			createBlockCmd.Usage()
+	if createBlockchainCmd.Parsed() {
+		if *addBlockchainAddress == "" {
+			createBlockchainCmd.Usage()
 			os.Exit(1)
 		}
-		fmt.Println("[*] Args:", *addBlockData)
-		cli.addBlock(*addBlockData)
+		cli.createBlockchain(*addBlockchainAddress)
 	}
 
-	if printBlockchainCmd.Parsed() {
-		cli.printChain()
+	if setNodeIdCmd.Parsed() {
+		if *idNumber == "" {
+			setNodeIdCmd.Usage()
+			os.Exit(1)
+		}
+		cli.setID(*idNumber)
+	}
+
+	if logOutCmd.Parsed() {
+		if *logOutValue == "" {
+			logOutCmd.Usage()
+			os.Exit(1)
+		}
+		cli.setID(*logOutValue)
 	}
 }

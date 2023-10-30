@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
+	"os"
 )
 
-const database = "blockchain.db"
+const database = "blockchain_%s.db"
 const blocksBucket = "blocks"
 
 // List of Blocks, The Blockchain
@@ -18,45 +19,72 @@ type Blockchain struct {
 	Head 	 []byte
 }
 
-// Constructor function for The Blockchain
-func NewBlockchain() *Blockchain {
+// Method that instatiates a totally new blockchain for some given address and nodeID.
+func CreateBlockchain(address, nodeID string) *Blockchain {
 	var currentHead []byte
-	db, err := bolt.Open(database, 0600, nil)
-	if err != nil {
-		log.Fatal("Unable to create database!")
-	}
+	nodeFileName := fmt.Sprintf(database, nodeID)
 
-	defer db.Close()
+	if dbExists(nodeFileName) {
+		log.Fatal("[*] Blockchain already exists!")
+		return nil
+	}else{
+		db, err := bolt.Open(nodeFileName, 0600, nil)
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(blocksBucket))
+		defer db.Close()
 
-		if bucket == nil {
+		err = db.Update(func(tx *bolt.Tx) error {
 			bucket, bucketError := tx.CreateBucket([]byte(blocksBucket))
 
-			genesisBlock := NewGenesisBlock()
+			cbtx := NewCoinbaseTX(address, "")
+			genesisBlock := NewGenesisBlock(cbtx)
 
 			bucketError = bucket.Put([]byte(genesisBlock.Hash), genesisBlock.Encode())
 			bucketError = bucket.Put([]byte("l"), genesisBlock.Hash)
 			currentHead = genesisBlock.Hash
-
+			
 			return bucketError
-		}else{
+		})
+
+		if err != nil {
+			log.Fatal("[*] Error building blockchain: ", err)
+		}
+
+		blockchain := &Blockchain{db, currentHead}
+		return blockchain
+	}
+}
+
+// Constructor function for The Blockchain.
+func NewBlockchain(nodeID string) *Blockchain {
+	var currentHead []byte
+	nodeFileName := fmt.Sprintf(database, nodeID)
+
+	if !dbExists(nodeFileName) {
+		log.Fatal("[*] No existing blockchain found. Create one first!")
+		return nil
+	}else{
+		db, err := bolt.Open(nodeFileName, 0600, nil)
+
+		defer db.Close()
+
+		err = db.Update(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket([]byte(blocksBucket))
+
 			currentHead = bucket.Get([]byte("l"))
 			return nil
+		})
+
+		if err != nil {
+			log.Fatal("[*] Error building blockchain: ", err)
 		}
-	})
 
-	if err != nil {
-		log.Fatal("Unable create Genesis Block!")
+		blockchain := &Blockchain{db, currentHead}
+		return blockchain
 	}
-
-	blockchain := &Blockchain{db, currentHead}
-	return blockchain
 }
 
 // Method that adds a new block to The Blockchain
-func (blockchain *Blockchain) AddBlock(data string) {
+func (blockchain *Blockchain) AddBlock(newBlock *Block) {
 	db, err := bolt.Open(database, 0600, nil)
 	if err != nil {
 		log.Fatal("Unable to open database!")
@@ -66,9 +94,6 @@ func (blockchain *Blockchain) AddBlock(data string) {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blocksBucket))
-
-		prevBlockHash := bucket.Get([]byte("l"))
-		newBlock := NewBlock(data, prevBlockHash)
 
 		bucket.Put([]byte(newBlock.Hash), newBlock.Encode())
 		bucket.Put([]byte("l"), newBlock.Hash)
@@ -112,4 +137,12 @@ func (blockchain *Blockchain) Print() {
 	if err != nil {
 		log.Fatal("Error reading database!")
 	}
+}
+
+// Function that checks if the database file exists.
+func dbExists(dbFile string) bool {
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
